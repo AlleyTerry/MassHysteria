@@ -1,27 +1,56 @@
 function love.load()
     -- world
     world = love.physics.newWorld(0,0)
+
+    world:setCallbacks(beginContact, endContact) -- collision callback
+
     -- {} means table
+    -- player1
     player1 = {}
     player1.body = love.physics.newBody(world, 400, 200, "dynamic")
+    player1.shape = love.physics.newCircleShape(20) 
+    player1.fixture = love.physics.newFixture(player1.body, player1.shape)
+    player1.fixture:setUserData("player1")
     player1.speed = 100
-    --player2
+    -- player2
     player2 = {}
     player2.body = love.physics.newBody(world, 400, 300, "dynamic")
+    player2.shape = love.physics.newCircleShape(20)
+    player2.fixture = love.physics.newFixture(player2.body, player2.shape)
+    player2.fixture:setUserData("player2")
     player2.speed = 100
     
- 
+    -- wood
+    wood = {}
+    wood.body = love.physics.newBody(world, 300, 300, "dynamic")
+    wood.shape = love.physics.newRectangleShape(40, 20)
+    wood.fixture = love.physics.newFixture(wood.body, wood.shape)
+    wood.fixture:setUserData("wood")
+    wood.body:setMass(0.1)
+    wood.fixture:setFriction(0.9)
     
-    --fire
+    wood.pushed = false -- Flag used to detect simultaneous collision of two players
+    
+    wood.player1Contact = false
+    wood.player2Contact = false
+
+    -- fire
     fire = {}
-    fire.body = love.physics.newBody(world, 100, 100, "kinematic")
-    fireSizeX = 100
-    fireSizeY = 100
+    fire.x, fire.y = 100, 100 -- position
+    fire.body = love.physics.newBody(world, fire.x, fire.y, "static")
+    fire.shape = love.physics.newRectangleShape(100, 100) -- collider of the fire
+    fire.fixture = love.physics.newFixture(fire.body, fire.shape)
+    fire.fixture: setUserData("fire")
+    fire.initialSize = 100  -- initiral size of fire
+    fire.size = fire.initialSize
+
+    fireCountdown = 10 -- Timer
     
 end
 
 function love.update(dt)
     world:update(dt)
+
     --movement code player 1
     local dx, dy = 0,0
     local dx2, dy2 = 0,0
@@ -60,21 +89,82 @@ function love.update(dt)
     player2.body:setLinearVelocity(dx2,dy2)
     player2.x, player2.y = player2.body:getPosition()
     
-    --fire constantly going out
-    fireSizeX = fireSizeX- 10 * dt
-    fireSizeY = fireSizeY- 10 * dt
+    -- collision
+    if wood.player1Contact and wood.player2Contact then
+        wood.pushed = true
+    else if wood.player1Contact == false or wood.player2Contact == false then
+        wood.pushed = false
+    end
+
+    -- if two players collide with the wood at the same time
+    if wood.pushed then
+        -- Calculate the combined push force based on both players' movement
+        local pushForceX = (dx + dx2) * 10
+        local pushForceY = (dy + dy2) * 10
+        
+        -- Apply force to wood to simulate pushing
+        wood.body:applyForce(pushForceX, pushForceY)
+    end
+
+    -- timer and fire constantly going out
+    fireCountdown = fireCountdown - dt
     
+    if fireCountdown > 0 then
+        fire.size = fire.initialSize * (fireCountdown / 10) -- shrinking
+    else
+        fire.size = 0
+        print("Game Over", 400, 400)
+    end
     
-    
-    
+    print(wood.pushed, 300, 300)
 end
 
 
 function love.draw()
     love.graphics.print("Hello World", 400, 300)
-    --draws a circle at player position with a radius of 100
-    love.graphics.circle("fill", player1.x, player1.y, 100)
-    love.graphics.circle("fill", player2.x, player2.y, 100)
-    fire.graphics = love.graphics.rectangle("fill", fire.body:getX(), fire.body:getY(), fireSizeX, fireSizeY)
+
+    --draws a circle at player position with a radius of 20
+    love.graphics.circle("fill", player1.x, player1.y, 20)
+    love.graphics.circle("fill", player2.x, player2.y, 20)
+    fire.graphics = love.graphics.rectangle("fill", fire.body:getX(), fire.body:getY(), fire.size, fire.size)
     
+    -- drawing wood
+    love.graphics.setColor(0.5, 0.25, 0)
+    love.graphics.polygon("fill", wood.body:getWorldPoints(wood.shape: getPoints()))
+
+    -- timer
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.print("Timer: " ..string.format("%.1f", fireCountdown), 10, 10)
+end
+
+-- Collision Enter!
+function beginContact(a, b, coll)
+    -- if player1 and player2 collide w/ the wood
+    if a:getUserData() == "wood" and b:getUserData() == "player1" then
+        wood.player1Contact = true
+    end    
+    if a:getUserData() == "wood" and b:getUserData() == "player2" then
+        wood.player2Contact = true
+    end
+
+    if (a:getUserData() == "fire" and b:getUserData() == "wood") or
+       (a:getUserData() == "wood" and b:getUserData() == "fire") then
+        fireCountdown = 10 -- reset Timer
+        fire.size = fire.initialSize -- reset fire size
+        print("More fire!!")
+    end
+
+end
+
+-- Collision Exit!!
+function endContact(a, b, coll)
+    -- players stop colliding w/ the wood
+    if a:getUserData() == "wood" and b:getUserData() == "player1" then
+        wood.player1Contact = false
+    elseif a:getUserData() == "wood" and b:getUserData() == "player2" then
+        wood.player2Contact = false
+    end
+
+end
+
 end
