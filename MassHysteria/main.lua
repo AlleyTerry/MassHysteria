@@ -45,7 +45,7 @@ function love.load()
     fire.size = fire.initialSize
 
     fireCountdown = 10 -- Timer
-    
+    gameOver = false
 end
 
 function love.update(dt)
@@ -55,17 +55,17 @@ function love.update(dt)
     local dx, dy = 0,0
     local dx2, dy2 = 0,0
 
-    if love.keyboard.isDown("w") then
+    if love.keyboard.isDown("w") and gameOver == false then
         --movement with apply force x, y
         dy = -player1.speed
     end
-    if love.keyboard.isDown("s") then
+    if love.keyboard.isDown("s") and gameOver == false then
         dy = player1.speed
     end
-    if love.keyboard.isDown("d") then
+    if love.keyboard.isDown("d") and gameOver == false then
         dx = player1.speed
     end
-    if love.keyboard.isDown("a") then
+    if love.keyboard.isDown("a") and gameOver == false then
         dx = -player1.speed
     end
     
@@ -73,16 +73,16 @@ function love.update(dt)
     player1.x, player1.y = player1.body:getPosition()
     
     --movement code player 2
-    if love.keyboard.isDown("up") then
+    if love.keyboard.isDown("up") and gameOver == false then
         dy2 = -player2.speed
     end
-    if love.keyboard.isDown("down") then
+    if love.keyboard.isDown("down") and gameOver == false then
         dy2 = player2.speed
     end
-    if love.keyboard.isDown("right") then
+    if love.keyboard.isDown("right") and gameOver == false then
         dx2 = player2.speed
     end
-    if love.keyboard.isDown("left") then
+    if love.keyboard.isDown("left") and gameOver == false then
         dx2 = -player2.speed
     end
 
@@ -123,6 +123,9 @@ function love.update(dt)
         if fireCountdown > 0 then
             fire.size = fire.initialSize * (fireCountdown / 10) -- shrinking
             end
+        if fireCountdown <= 0 then
+            gameOver = true
+        end
         
     print(wood.pushed, 300, 300)
 end
@@ -147,6 +150,7 @@ function love.draw()
     end
     if fireCountdown <= 0 then
     love.graphics.print("Game Over", 10, 10)
+        gameOver = true
     end
 end
 
