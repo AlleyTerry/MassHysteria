@@ -23,10 +23,10 @@ function love.load()
     -- wood
     wood = {}
     wood.body = love.physics.newBody(world, 300, 300, "dynamic")
-    wood.shape = love.physics.newRectangleShape(40, 20)
+    wood.shape = love.physics.newRectangleShape(60, 20)
     wood.fixture = love.physics.newFixture(wood.body, wood.shape)
     wood.fixture:setUserData("wood")
-    wood.body:setMass(0.1)
+    wood.body:setMass(100)
     wood.fixture:setFriction(0.9)
     
     wood.pushed = false -- Flag used to detect simultaneous collision of two players
@@ -41,7 +41,7 @@ function love.load()
     fire.shape = love.physics.newRectangleShape(100, 100) -- collider of the fire
     fire.fixture = love.physics.newFixture(fire.body, fire.shape)
     fire.fixture: setUserData("fire")
-    fire.initialSize = 100  -- initiral size of fire
+    fire.initialSize = 100  -- initial size of fire
     fire.size = fire.initialSize
 
     fireCountdown = 10 -- Timer
@@ -88,6 +88,17 @@ function love.update(dt)
 
     player2.body:setLinearVelocity(dx2,dy2)
     player2.x, player2.y = player2.body:getPosition()
+
+    -- an attempt to get the fire to reset if the wood was in the same position as it, that did not work
+    
+    -- woodX, woodY = wood.body:getPosition()
+    -- fireX, fireY = fire.body:getPosition()
+
+    --  if (woodX == fireX or woodY == fireY) then
+    --      fireCountdown = 10 -- reset Timer
+    --      fire.size = fire.initialSize -- reset fire size
+    --      print("More fire!!")
+    --  end
     
     -- collision
     if wood.player1Contact and wood.player2Contact then
@@ -108,17 +119,13 @@ function love.update(dt)
 
     -- timer and fire constantly going out
     fireCountdown = fireCountdown - dt
-    
-    if fireCountdown > 0 then
-        fire.size = fire.initialSize * (fireCountdown / 10) -- shrinking
-    else
-        fire.size = 0
-        print("Game Over", 400, 400)
-    end
-    
+
+        if fireCountdown > 0 then
+            fire.size = fire.initialSize * (fireCountdown / 10) -- shrinking
+            end
+        
     print(wood.pushed, 300, 300)
 end
-
 
 function love.draw()
     love.graphics.print("Hello World", 400, 300)
@@ -133,12 +140,19 @@ function love.draw()
     love.graphics.polygon("fill", wood.body:getWorldPoints(wood.shape: getPoints()))
 
     -- timer
+    -- when timer reaches 0, says game over instead
     love.graphics.setColor(1, 1, 1)
-    love.graphics.print("Timer: " ..string.format("%.1f", fireCountdown), 10, 10)
+    if fireCountdown > 0 then
+        love.graphics.print("Timer: " ..string.format("%.1f", fireCountdown), 10, 10)
+    end
+    if fireCountdown <= 0 then
+    love.graphics.print("Game Over", 10, 10)
+    end
 end
 
 -- Collision Enter!
 function beginContact(a, b, coll)
+    
     -- if player1 and player2 collide w/ the wood
     if a:getUserData() == "wood" and b:getUserData() == "player1" then
         wood.player1Contact = true
@@ -153,7 +167,6 @@ function beginContact(a, b, coll)
         fire.size = fire.initialSize -- reset fire size
         print("More fire!!")
     end
-
 end
 
 -- Collision Exit!!
