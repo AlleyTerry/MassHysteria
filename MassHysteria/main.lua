@@ -22,12 +22,13 @@ function love.load()
     
     -- wood
     wood = {}
+    wood.x, wood.y = 300, 300
     wood.body = love.physics.newBody(world, 300, 300, "dynamic")
-    wood.shape = love.physics.newRectangleShape(60, 20)
+    wood.shape = love.physics.newRectangleShape(80, 20)
     wood.fixture = love.physics.newFixture(wood.body, wood.shape)
     wood.fixture:setUserData("wood")
-    wood.body:setMass(100)
-    wood.fixture:setFriction(0.9)
+    wood.body:setMass(600)
+    wood.fixture:setFriction(1.5)
     
     wood.pushed = false -- Flag used to detect simultaneous collision of two players
     
@@ -38,13 +39,13 @@ function love.load()
     fire = {}
     fire.x, fire.y = 100, 100 -- position
     fire.body = love.physics.newBody(world, fire.x, fire.y, "static")
-    fire.shape = love.physics.newRectangleShape(100, 100) -- collider of the fire
+    fire.shape = love.physics.newCircleShape(40) -- collider of the fire
     fire.fixture = love.physics.newFixture(fire.body, fire.shape)
     fire.fixture: setUserData("fire")
     fire.initialSize = 100  -- initial size of fire
     fire.size = fire.initialSize
 
-    fireCountdown = 10 -- Timer
+    fireCountdown = 15 -- Timer
     gameOver = false
 end
 
@@ -88,6 +89,9 @@ function love.update(dt)
 
     player2.body:setLinearVelocity(dx2,dy2)
     player2.x, player2.y = player2.body:getPosition()
+    
+    wood.x, wood.y = wood.body:getPosition()
+    fire.x, fire.y = fire.body:getPosition()
 
     -- an attempt to get the fire to reset if the wood was in the same position as it, that did not work
     
@@ -107,38 +111,67 @@ function love.update(dt)
         wood.pushed = false
     end
 
-    -- if two players collide with the wood at the same time
-    if wood.pushed then
-        -- Calculate the combined push force based on both players' movement
-        local pushForceX = (dx + dx2) * 10
-        local pushForceY = (dy + dy2) * 10
-        
-        -- Apply force to wood to simulate pushing
-        wood.body:applyForce(pushForceX, pushForceY)
-    end
+        -- if two players collide with the wood at the same time
+        if wood.pushed then
+            -- Calculate the combined push force based on both players' movement
+            local pushForceX = (dx + dx2) * 10
+            local pushForceY = (dy + dy2) * 10
 
-    -- timer and fire constantly going out
-    fireCountdown = fireCountdown - dt
+            -- Apply force to wood to simulate pushing
+            wood.body:applyForce(pushForceX, pushForceY)
+        end
 
+        -- timer and fire constantly going out
+        fireCountdown = fireCountdown - dt
+
+        --shrinks the fire over the duration of the fireCountdown
+        --if the fireCountdown hits 0, teleports the wood off screen because we can't destroy it because lua love is a garbage program and sucks super bad and if we try to destroy it it throws an error
+        --and also initiates a gameover by setting the gameOver bool to true :)
         if fireCountdown > 0 then
-            fire.size = fire.initialSize * (fireCountdown / 10) -- shrinking
-            end
+            fire.size = fire.initialSize * (fireCountdown / 15) -- shrinking
+        end
         if fireCountdown <= 0 then
             gameOver = true
+            wood.body:setPosition(1000, 1000)
+        end
+
+        print(wood.pushed, 300, 300)
+
+        -- checks if the fire is colliding with the wood and if it is, resets the timer and fire size and wood position
+        if (checkCircleToRectangleCollision(fire.x, fire.y, fire.size, wood.x, wood.y, 80, 20)) then
+            fireCountdown = 15 -- reset Timer
+            fire.size = fire.initialSize -- reset fire size
+            print("More fire!!")
+            wood.x, wood.y = 300, 300
+            wood.body:setPosition(wood.x, wood.y)
         end
         
-    print(wood.pushed, 300, 300)
-end
+    end
+    end
+    
 
 function love.draw()
-    love.graphics.print("Hello World", 400, 300)
-
-    --draws a circle at player position with a radius of 20
-    love.graphics.circle("fill", player1.x, player1.y, 20)
-    love.graphics.circle("fill", player2.x, player2.y, 20)
-    fire.graphics = love.graphics.rectangle("fill", fire.body:getX(), fire.body:getY(), fire.size, fire.size)
+    if (gameOver == false) then
+        love.graphics.print("Work together to push the wood into the fire!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!", 400, 300)
+    end
     
-    -- drawing wood
+    if (gameOver == true) then
+        love.graphics.print("Teamwork didn't make This dream work ://///", 400, 300)
+    end
+    
+    --draws the fire and it is orange :) 
+    love.graphics.setColor(1, .25, 0)
+    fire.graphics = love.graphics.circle("fill", fire.body:getX(), fire.body:getY(), fire.size, fire.size)
+    
+    --draws a circle at player position with a radius of 20, and the player is blue :P
+    love.graphics.setColor(0, .25, .5)
+    love.graphics.circle("fill", player1.x, player1.y, 20)
+    
+    --this player is purple :)
+    love.graphics.setColor(0.5, 0, .5)
+    love.graphics.circle("fill", player2.x, player2.y, 20)
+    
+    -- drawing wood :o
     love.graphics.setColor(0.5, 0.25, 0)
     love.graphics.polygon("fill", wood.body:getWorldPoints(wood.shape: getPoints()))
 
@@ -173,6 +206,17 @@ function beginContact(a, b, coll)
     end
 end
 
+-- checks specifically if a circle and rectangle are colliding
+-- oddly niche use case? who cares! this is lua love!!!!!!!! WE DO WHATEVER WE WANT BABEYEYEYEYYEYEYEYEYEYYYY
+-- and it really works for this exact game so honestly? thank you lua love. thank you for including this Very Specific function.
+    function checkCircleToRectangleCollision(cx, cy, cr, rectX, rectY, rectW, rectH)
+        local nearestX = math.max(rectX, math.min(cx, rectX + rectW))
+        local nearestY = math.max(rectY, math.min(cy, rectY + rectH))
+        local dx, dy = math.abs(cx - nearestX), math.abs(cy - nearestY)
+        if dx > cr or dy > cr then return false end
+        return dx*dx + dy*dy < cr*cr
+    end
+
 -- Collision Exit!!
 function endContact(a, b, coll)
     -- players stop colliding w/ the wood
@@ -181,7 +225,5 @@ function endContact(a, b, coll)
     elseif a:getUserData() == "wood" and b:getUserData() == "player2" then
         wood.player2Contact = false
     end
-
-end
 
 end
